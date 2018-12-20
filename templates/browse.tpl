@@ -1,5 +1,3 @@
-{% extends "index.html" %}
-
 <h1>Browse your favorite TV show</h1>
 <div class="browse">
 % for show in result:

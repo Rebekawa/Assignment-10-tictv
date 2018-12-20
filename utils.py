@@ -2,7 +2,7 @@ from bottle import template
 import json
 
 JSON_FOLDER = './data'
-AVAILABE_SHOWS = ["7", "66", "73", "82", "112", "143", "175", "216", "1371", "1871","2993", "305"]
+AVAILABLE_SHOWS = ["7", "66", "73", "82", "112", "143", "175", "216", "1371", "1871", "2993", "305"]
 
 
 def getVersion():
@@ -15,8 +15,7 @@ def getJsonFromFile(showName):
     except:
         return "{}"
 
+#results = ['showid':'', 'episodid':'', 'text':'']
 
-def my_func():
 
-    return an array of all the jsons
 
