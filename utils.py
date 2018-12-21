@@ -15,7 +15,7 @@ def getJsonFromFile(showName):
     except:
         return "{}"
 
-#results = ['showid':'', 'episodid':'', 'text':'']
+
 
 
 

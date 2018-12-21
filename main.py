@@ -1,98 +1,110 @@
 import os
-from bottle import (get, post, redirect, request, route, run, static_file, template,
-                    jinja2_view, error)
+import bottle
+from bottle import (get, request, route, run, static_file, template, jinja2_view, error)
 import utils
 from functools import partial
 import json
+from sys import argv
+
+
+DEBUG = os.environ.get("DEBUG")
+bottle.debug(True)
+
 view = partial(jinja2_view, template_lookup=['templates'])
 
-# Static Routes
 
-@error(404)
-def error404(error):
-    sectionTemplate = "./templates/404.tpl"
+@route('/')
+def home_page():
+    sectionTemplate = "./templates/home.tpl"
     return template("./pages/index.html", version=utils.getVersion(), sectionTemplate=sectionTemplate, sectionData={})
 
-
-@error(500)
-def error500(error):
-    sectionTemplate = "./templates/404.tpl"
-    return template("./pages/index.html", version=utils.getVersion(), sectionTemplate=sectionTemplate, sectionData={})
 
 @route('/browse')
 @view('browse.tpl')
 def browse_page():
     sectionTemplate = "./templates/browse.tpl"
+    shows_list = []
+    for show in utils.AVAILABLE_SHOWS:
+        shows_list.append(json.loads(utils.getJsonFromFile(show)))
     return template("./pages/index.html", version=utils.getVersion(), sectionTemplate=sectionTemplate,
-                    sectionData=[json.loads(utils.getJsonFromFile(elem)) for elem in utils.AVAILABLE_SHOWS])
+                    sectionData=shows_list)
+
+
+@route('/show/<number>')
+@view('show.tpl')
+def show_page(number):
+    sectionTemplate = "./templates/show.tpl"
+    show = json.loads(utils.getJsonFromFile(number))
+    return template("./pages/index.html", version=utils.getVersion(), sectionTemplate=sectionTemplate,
+                    sectionData=show)
 
 
 @route('/ajax/show/<number>')
 @view('show.tpl')
-def browse_page(number):
-    return template("./templates/show.tpl", version=utils.getVersion(),
-                    result=json.loads(utils.getJsonFromFile(number)))
-
-@route('/show/<number>')
-@view('show.tpl')
-def browse_page(number):
-    sectionTemplate = "./templates/show.tpl"
-    return template("./pages/index.html", version=utils.getVersion(), sectionTemplate=sectionTemplate,
-                    sectionData=json.loads(utils.getJsonFromFile(number)))
-
-
-
-@route('/search', method="POST")
-@view('search_result.tpl')
-def search():
-    search_word = request.forms.get("q")
-    all_shows = [json.loads(utils.getJsonFromFile(show)) for show in utils.AVAILABLE_SHOWS]
-    relevant_result = []
-    for show in all_shows:
-        for episode in show["_embedded"]["episodes"]:
-            s = {}
-            if type(episode['summary']) == str and search_word in episode['summary'] or type(episode['name']) == str and search_word in episode['name']:
-                s["showid"] = show["id"]
-                s['episodeid'] = episode["id"]
-                s['text'] = show['name'] + " : " + episode["name"]
-                relevant_result.append(s)
-    return template("./pages/index.html", version=utils.getVersion(), sectionTemplate="./templates/search_result.tpl",
-                    sectionData={}, results = relevant_result, query = search_word)
+def show_page(number):
+    show = json.loads(utils.getJsonFromFile(number))
+    return template("./templates/show.tpl", version=utils.getVersion(), result=show)
 
 
 @route('/show/<number>/episode/<episode_number>')
-def show(number, episode_number):
+@view('episode.tpl')
+def episode_page(number, episode_number):
     sectionTemplate = "./templates/episode.tpl"
-    json_show = utils.getJsonFromFile(number)
-    show = json.loads(json_show)
+    show = json.loads(utils.getJsonFromFile(number))
     episodes = show["_embedded"]["episodes"]
     for episode in episodes:
-        if str(episode["id"]) == episode_number:
-            result_episode = episode
+        if episode["id"] == int(episode_number):
+            relevant_episode = episode
     return template("./pages/index.html", version=utils.getVersion(), sectionTemplate=sectionTemplate,
-                    sectionData=result_episode)
+                    sectionData=relevant_episode)
 
 
 @route('/ajax/show/<number>/episode/<episode_number>')
-def show(number, episode_number):
-    json_show = utils.getJsonFromFile(number)
-    show = json.loads(json_show)
+@view('episode.tpl')
+def episode_page(number, episode_number):
+    show = utils.getJsonFromFile(number)
+    show = json.loads(show)
     episodes = show["_embedded"]["episodes"]
     for episode in episodes:
-        if str(episode["id"]) == episode_number:
-            result_episode = episode
-    return template("./templates/episode.tpl", result=result_episode)
-
+        if episode["id"] == int(episode_number):
+            relevant_episode = episode
+    return template("./templates/episode.tpl", result=relevant_episode)
 
 
 @route('/search')
 @view('search.tpl')
 def search_page():
     sectionTemplate = "./templates/search.tpl"
-    return template("./pages/index.html", version=utils.getVersion(), sectionTemplate=sectionTemplate,
-                    sectionData={})
+    return template("./pages/index.html", version=utils.getVersion(), sectionTemplate=sectionTemplate, sectionData={})
 
 
+@route('/search', method="POST")
+@view('search_result.tpl')
+def search_page():
+    user_input = request.forms.get("q")
+    shows_list = []
+    for show in utils.AVAILABLE_SHOWS:
+        shows_list.append(json.loads(utils.getJsonFromFile(show)))
+    relevant_episode = []
+    for show in shows_list:
+        for episode in show["_embedded"]["episodes"]:
+            r = {}
+            if type(episode['summary']) == str and user_input in episode['summary'] or type(episode['name']) == str and user_input in episode['name']:
+                r["showid"] = show["id"]
+                r['episodeid'] = episode["id"]
+                r['text'] = show['name'] + " : " + episode["name"]
+                relevant_episode.append(r)
+    return template("./pages/index.html", version=utils.getVersion(), sectionTemplate="./templates/search_result.tpl",
+                    sectionData={}, results=relevant_episode, query=user_input)
+
+
+@error(404)
+def error404_page(error):
+    sectionTemplate = "./templates/404.tpl"
+    return template("./pages/index.html", version=utils.getVersion(), sectionTemplate=sectionTemplate, sectionData={})
+
+
+# Static Routes
 
 @get("/js/<filepath:re:.*\.js>")
 def js(filepath):
@@ -109,11 +121,11 @@ def img(filepath):
     return static_file(filepath, root="./images")
 
 
-@route('/')
-def index():
-    sectionTemplate = "./templates/home.tpl"
-    return template("./pages/index.html", version=utils.getVersion(), sectionTemplate=sectionTemplate, sectionData={})
 
+#if DEBUG:
+	#bottle.run(host='localhost', port=7000)
+#else:
+	#bottle.run(host='0.0.0.0', port=argv[1])
 
 
 if __name__ == "__main__":
