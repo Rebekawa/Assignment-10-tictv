@@ -122,11 +122,11 @@ def img(filepath):
 
 
 
-#if DEBUG:
-	#bottle.run(host='localhost', port=7000)
-#else:
-	#bottle.run(host='0.0.0.0', port=argv[1])
+if DEBUG:
+	bottle.run(host='localhost', port=7000)
+else:
+	bottle.run(host='0.0.0.0', port=argv[1])
 
 
-if __name__ == "__main__":
-    run(host='localhost', port=7000, debug=True)
+#if __name__ == "__main__":
+    #run(host='localhost', port=7000, debug=True)
